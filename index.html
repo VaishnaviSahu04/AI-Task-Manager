@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Task Manager</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f8;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        textarea {
+            width: 400px;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-complete {
+            background: green;
+            color: white;
+        }
+
+        .btn-delete {
+            background: red;
+            color: white;
+        }
+
+        .task-card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .high { color: red; font-weight: bold; }
+        .medium { color: orange; font-weight: bold; }
+        .low { color: green; font-weight: bold; }
+
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        input {
+            padding: 10px;
+            width: 300px;
+            margin-top: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🚀 AI Task Manager</h1>
+
+<textarea id="inputText" rows="4" placeholder="Enter meeting text..."></textarea><br>
+
+<button class="btn-primary" onclick="addTasks()">Extract Tasks</button>
+
+<br>
+
+<input 
+    type="text" 
+    id="searchBox" 
+    placeholder="🔍 Search tasks..."
+    onkeyup="filterTasks()"
+/>
+
+<div class="dashboard">
+    <div class="box">📊 Total: <span id="total">0</span></div>
+    <div class="box">⏳ Pending: <span id="pending">0</span></div>
+    <div class="box">✅ Completed: <span id="completed">0</span></div>
+    <div class="box">⚠️ Overdue: <span id="overdue">0</span></div>
+</div>
+
+<h2>Tasks</h2>
+<div id="tasks"></div>
+
+<script>
+
+async function addTasks() {
+    const text = document.getElementById("inputText").value;
+
+    await fetch("http://127.0.0.1:8000/add_meeting", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text })
+    });
+
+    loadTasks();
+}
+
+function updateDashboard(tasks) {
+    document.getElementById("total").innerText = tasks.length;
+    document.getElementById("pending").innerText = tasks.filter(t => t.status === "Pending").length;
+    document.getElementById("completed").innerText = tasks.filter(t => t.status === "Completed").length;
+    document.getElementById("overdue").innerText = tasks.filter(t => t.status === "Overdue").length;
+}
+
+function displayTasks(tasks) {
+    let html = "";
+
+    tasks.forEach(t => {
+        let priorityClass = t.priority.toLowerCase();
+
+        let statusColor =
+            t.status === "Completed" ? "green" :
+            t.status === "Overdue" ? "red" :
+            "orange";
+
+        html += `
+        <div class="task-card">
+            <h3>${t.task}</h3>
+            <p><b>Owner:</b> ${t.owner}</p>
+            <p><b>Deadline:</b> ${t.deadline}</p>
+            <p><b>Priority:</b> <span class="${priorityClass}">${t.priority}</span></p>
+            <p><b>Status:</b> <span style="color:${statusColor}; font-weight:bold">${t.status}</span></p>
+
+            <button class="btn-complete" onclick="markComplete(${t.id})">
+                ✅ Complete
+            </button>
+
+            <button class="btn-delete" onclick="deleteTask(${t.id})">
+                ❌ Delete
+            </button>
+        </div>
+        `;
+    });
+
+    document.getElementById("tasks").innerHTML = html;
+}
+
+async function markComplete(id) {
+    await fetch(`http://127.0.0.1:8000/update_status/${id}?status=Completed`, {
+        method: "PUT"
+    });
+
+    loadTasks();
+}
+
+async function deleteTask(id) {
+    await fetch(`http://127.0.0.1:8000/delete_task/${id}`, {
+        method: "DELETE"
+    });
+
+    loadTasks();
+}
+
+async function loadTasks() {
+    const response = await fetch("http://127.0.0.1:8000/get_tasks");
+    const data = await response.json();
+
+    updateDashboard(data.tasks);
+    displayTasks(data.tasks);
+}
+
+function filterTasks() {
+    const search = document.getElementById("searchBox").value.toLowerCase();
+    const cards = document.querySelectorAll(".task-card");
+
+    cards.forEach(card => {
+        if (card.innerText.toLowerCase().includes(search)) {
+            card.style.display = "block";
+        } else {
+            card.style.display = "none";
+        }
+    });
+}
+
+// Auto load + refresh
+loadTasks();
+setInterval(loadTasks, 5000);
+
+</script>
+
+</body>
+</html>
