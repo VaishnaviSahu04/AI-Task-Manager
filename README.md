@@ -82,8 +82,11 @@ Swagger API:
 http://127.0.0.1:8000/docs (paste on browser)
 
 Example Input
+
 Rahul must finish backend today urgently, Priya should complete UI tomorrow, testing can be done next week
+
 Output:
+
 Task 1: Rahul → High Priority → Today
 Task 2: Priya → Medium → Tomorrow
 Task 3: Testing → Low → Next Week
